@@ -277,8 +277,6 @@
   .report-field-row textarea{min-height:120px;line-height:1.5;}
   .copy-btn{flex-shrink:0;white-space:nowrap;}
   .copy-btn.copied{background:var(--green);color:#fff;border-color:var(--green);}
-  .report-fallback-note{margin-top:16px;font-size:12.5px;color:var(--muted);}
-  .report-fallback-note a{color:var(--blue);}
   .report-fallback-details{margin-top:16px;}
   .report-fallback-details summary{
     cursor:pointer;
@@ -2998,7 +2996,7 @@ const CONFIG = {
   storageKey: "esd_training_progress_v2",
   questionsPerQuiz: 5, // hur många frågor som visas per quizförsök, slumpmässigt valda ur modulens fråga-pool (som nu är större än detta tal)
   finalQuizQuestionCount: 8, // antal frågor i det avslutande blandade quizet (slumpade från alla moduler tillsammans)
-  artifactUrl: "https://claude.ai/code/artifact/5bb98a21-54ce-4880-93e4-7f60d4b16c26", // Publik länk till denna kurs, används för QR-koden på startsidan
+  artifactUrl: "https://arosagamboa-cmd.github.io/esd-utbildning/", // Publik länk till denna kurs (GitHub Pages, inte Artifact-länken — mailto/dela fungerar inte i Artifact-sandlådan), används för QR-koden på startsidan
   adminPin: "8420", // Kod för granskningsläget (länken "Granska" längst ner). OBS: synlig i sidans källkod, inget riktigt lösenordsskydd — byt gärna till egen kod.
   trainerName: "Alexander Gamboa" // Fast signatur/ansvarig utbildare, visas på alla certifikat
 };
@@ -3091,19 +3089,13 @@ const I18N = {
     attemptsLabel: "Försök",
     overallPassed: "Godkänd hela utbildningen",
     viewCertificate: "Visa/skriv ut intyg",
-    emailResults: "Skicka resultat via e-post",
-    reportCardTitle: "Rapportera ditt resultat",
-    reportCardIntro: "Ämnesraden har redan kopierats till urklipp åt dig. Öppna din e-postapp, skapa ett nytt mejl, och kopiera in de tre delarna nedan i rätt fält — Ämne måste hamna som ämnesrad för att kunna räknas in automatiskt.",
     reportToLabel: "Till",
     reportSubjectLabel: "Ämne",
     reportBodyLabel: "Meddelande",
     copyBtn: "Kopiera",
     copiedBtn: "Kopierat!",
-    orOpenDirectly: "Eller, om din enhet stödjer det:",
     shareBtn: "Dela resultat",
-    shareCardIntro: "Tryck på knappen och välj din e-postapp i menyn som öppnas — ämne och meddelande fylls i automatiskt. Ange bara mottagaradressen nedan i mejlets Till-fält innan du skickar.",
-    shareRecipientLabel: "Mottagare (klistra in i mejlets Till-fält)",
-    shareFallbackNote: "Fungerade inte delningsknappen? Kopiera fälten manuellt istället:",
+    shareFallbackNote: "Rapportera resultatet manuellt:",
     certHeadline: "Certifikat",
     certTitle: "Intyg om genomförd utbildning",
     certLeadIn: "Härmed intygas att",
@@ -3113,7 +3105,7 @@ const I18N = {
     certCompany: "Företag",
     printBtn: "Skriv ut / Spara som PDF",
     backBtn: "Tillbaka",
-    resultsNote: "Rapportera resultatet genom att kopiera in uppgifterna nedan i ett nytt mejl — se rutan under. Du kan även skriva ut eller spara intyget som PDF nedan.",
+    resultsNote: "Tryck på \"Dela resultat\" nedan och välj din e-postapp för att rapportera resultatet — glöm inte mottagaradressen. Du kan även skriva ut eller spara intyget som PDF.",
     recapTitle: "Kom ihåg",
     signaturePlaceholder: "Signatur / Ansvarig utbildare",
     passedRibbon: "GODKÄND",
@@ -3222,19 +3214,13 @@ const I18N = {
     attemptsLabel: "Attempts",
     overallPassed: "Passed the entire course",
     viewCertificate: "View/print certificate",
-    emailResults: "Send results via email",
-    reportCardTitle: "Report your result",
-    reportCardIntro: "The subject line has already been copied to your clipboard. Open your email app, start a new message, and copy the three parts below into the matching fields — Subject must end up as the actual subject line to be counted automatically.",
     reportToLabel: "To",
     reportSubjectLabel: "Subject",
     reportBodyLabel: "Message",
     copyBtn: "Copy",
     copiedBtn: "Copied!",
-    orOpenDirectly: "Or, if your device supports it:",
     shareBtn: "Share result",
-    shareCardIntro: "Tap the button and choose your email app from the menu that opens — the subject and message are filled in automatically. Just enter the recipient address below into the email's To field before sending.",
-    shareRecipientLabel: "Recipient (paste into the email's To field)",
-    shareFallbackNote: "Share button didn't work? Copy the fields manually instead:",
+    shareFallbackNote: "Report your result manually:",
     certHeadline: "Certificate",
     certTitle: "Certificate of Completion",
     certLeadIn: "This is to certify that",
@@ -3244,7 +3230,7 @@ const I18N = {
     certCompany: "Company",
     printBtn: "Print / Save as PDF",
     backBtn: "Back",
-    resultsNote: "Report your result by copying the details below into a new email — see the box underneath. You can also print or save the certificate as a PDF below.",
+    resultsNote: "Tap \"Share result\" below and choose your email app to report the result — don't forget to add the recipient address. You can also print or save the certificate as a PDF.",
     recapTitle: "Key takeaways",
     signaturePlaceholder: "Signature / Course administrator",
     passedRibbon: "PASSED",
@@ -4919,24 +4905,18 @@ function renderFinal(){
       <p class="subtitle">${t("resultsNote")}</p>
       <div class="btn-row">
         <button class="btn accent" onclick="goToCertificate()">${icon("certificate")}${t("viewCertificate")}</button>
+        ${shareSupported ? `<button type="button" class="btn outline" onclick="shareReport()">${icon("mail")}${t("shareBtn")}</button>` : ""}
       </div>
-    </div>
-    <div class="card report-card">
-      <h3>${icon("clipboard")}${t("reportCardTitle")}</h3>
-      ${shareSupported ? `
-      <p class="subtitle">${t("shareCardIntro")}</p>
-      <div class="btn-row">
-        <button type="button" class="btn accent" onclick="shareReport()">${icon("mail")}${t("shareBtn")}</button>
-      </div>
-      <div class="report-field">
-        <label for="copy-field-to">${t("shareRecipientLabel")}</label>
-        <div class="report-field-row">
-          <input type="text" id="copy-field-to" readonly value="${escapeHtml(parts.to)}">
-          <button type="button" class="btn outline copy-btn" id="copy-btn-to" onclick="copyReportField('to')">${t("copyBtn")}</button>
-        </div>
-      </div>
+      ${shareSupported ? `` : `
       <details class="report-fallback-details">
         <summary>${t("shareFallbackNote")}</summary>
+        <div class="report-field">
+          <label for="copy-field-to">${t("reportToLabel")}</label>
+          <div class="report-field-row">
+            <input type="text" id="copy-field-to" readonly value="${escapeHtml(parts.to)}">
+            <button type="button" class="btn outline copy-btn" id="copy-btn-to" onclick="copyReportField('to')">${t("copyBtn")}</button>
+          </div>
+        </div>
         <div class="report-field">
           <label for="copy-field-subject">${t("reportSubjectLabel")}</label>
           <div class="report-field-row">
@@ -4952,31 +4932,7 @@ function renderFinal(){
           </div>
         </div>
       </details>
-      ` : `
-      <p class="subtitle">${t("reportCardIntro")}</p>
-      <div class="report-field">
-        <label for="copy-field-to">${t("reportToLabel")}</label>
-        <div class="report-field-row">
-          <input type="text" id="copy-field-to" readonly value="${escapeHtml(parts.to)}">
-          <button type="button" class="btn outline copy-btn" id="copy-btn-to" onclick="copyReportField('to')">${t("copyBtn")}</button>
-        </div>
-      </div>
-      <div class="report-field">
-        <label for="copy-field-subject">${t("reportSubjectLabel")}</label>
-        <div class="report-field-row">
-          <input type="text" id="copy-field-subject" readonly value="${escapeHtml(parts.subject)}">
-          <button type="button" class="btn outline copy-btn" id="copy-btn-subject" onclick="copyReportField('subject')">${t("copyBtn")}</button>
-        </div>
-      </div>
-      <div class="report-field">
-        <label for="copy-field-body">${t("reportBodyLabel")}</label>
-        <div class="report-field-row">
-          <textarea id="copy-field-body" readonly>${escapeHtml(parts.body)}</textarea>
-          <button type="button" class="btn outline copy-btn" id="copy-btn-body" onclick="copyReportField('body')">${t("copyBtn")}</button>
-        </div>
-      </div>
       `}
-      <p class="report-fallback-note">${t("orOpenDirectly")} <a id="email-results-link" href="${escapeHtml(buildMailtoUrl())}" target="_blank" rel="noopener">${t("emailResults")}</a></p>
     </div>
   `;
 }
@@ -5146,12 +5102,6 @@ function buildReportParts(){
   return { to: CONFIG.resultsEmail, subject, body };
 }
 
-function buildMailtoUrl(){
-  const parts = buildReportParts();
-  const cc = state.email ? `&cc=${encodeURIComponent(state.email)}` : "";
-  return `mailto:${parts.to}?subject=${encodeURIComponent(parts.subject)}&body=${encodeURIComponent(parts.body)}${cc}`;
-}
-
 // Clipboard fallback for the mailto: block confirmed on published Artifacts (the
 // viewer sandbox blocks mailto: navigation entirely — see esd-power-automate-reference
 // memory). Copies one field at a time rather than one combined blob so the subject
@@ -5195,8 +5145,12 @@ async function copyReportField(which){
 async function shareReport(){
   if(!(navigator.share)) return false;
   const parts = buildReportParts();
+  // Web Share has no recipient field, so the address travels as the first line of
+  // the shared text instead of its own UI — the learner still has to place it in
+  // the mail app's To field themselves, but at least it's right there to copy.
+  const text = t("reportToLabel") + ": " + parts.to + "\n\n" + parts.body;
   try{
-    await navigator.share({ title: parts.subject, text: parts.body });
+    await navigator.share({ title: parts.subject, text });
     return true;
   }catch(e){
     return false; // AbortError (user cancelled) or unsupported — no error UI needed
