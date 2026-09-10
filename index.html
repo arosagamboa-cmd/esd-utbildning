@@ -258,6 +258,13 @@
     transition:border-color 0.15s;
   }
   input[type=text]:focus, input[type=email]:focus{outline:none;border-color:var(--blue);}
+  .report-required{display:flex;gap:12px;align-items:flex-start;margin:16px 0;padding:14px 18px;background:linear-gradient(135deg,#eaf6fd,#f6fafc);border-radius:var(--radius-sm);border:1px solid rgba(63,169,220,0.35);}
+  .report-required-icon{width:24px;height:24px;flex:0 0 auto;color:var(--blue);margin-top:2px;}
+  .report-required strong{display:block;color:var(--navy);font-size:14.5px;margin-bottom:3px;}
+  .report-required p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.5;}
+  .btn-row.align-top{align-items:flex-start;}
+  .btn-with-caption{display:flex;flex-direction:column;gap:8px;align-items:flex-start;}
+  .btn-caption{margin:0;font-size:12.5px;color:var(--muted);}
   .report-field{margin-top:14px;}
   .report-field label{display:block;font-weight:600;margin-bottom:6px;font-size:13.5px;}
   .report-field-row{display:flex;gap:8px;align-items:flex-start;}
@@ -3096,6 +3103,8 @@ const I18N = {
     copiedBtn: "Kopierat!",
     shareBtn: "Dela resultat",
     shareFallbackNote: "Rapportera resultatet manuellt:",
+    shareRequiredTitle: "Detta steg krävs för att du ska registreras som godkänd",
+    shareRequiredTextShare: "Tryck på \"Dela resultat\" nedan och skicka mejlet som öppnas, utan att ändra ämnesraden. Det är enda sättet vi får bekräftelse på att du klarat utbildningen — även om du är godkänd registreras det inte förrän mejlet skickats.",
     certHeadline: "Certifikat",
     certTitle: "Intyg om genomförd utbildning",
     certLeadIn: "Härmed intygas att",
@@ -3105,7 +3114,7 @@ const I18N = {
     certCompany: "Företag",
     printBtn: "Skriv ut / Spara som PDF",
     backBtn: "Tillbaka",
-    resultsNote: "Tryck på \"Dela resultat\" nedan och välj din e-postapp för att rapportera resultatet — glöm inte mottagaradressen. Du kan även skriva ut eller spara intyget som PDF.",
+    resultsNote: "Du kan även skriva ut eller spara intyget som PDF.",
     recapTitle: "Kom ihåg",
     signaturePlaceholder: "Signatur / Ansvarig utbildare",
     passedRibbon: "GODKÄND",
@@ -3221,6 +3230,8 @@ const I18N = {
     copiedBtn: "Copied!",
     shareBtn: "Share result",
     shareFallbackNote: "Report your result manually:",
+    shareRequiredTitle: "This step is required for you to be registered as passed",
+    shareRequiredTextShare: "Tap \"Share result\" below and send the email that opens, without changing the subject line. It's the only way we get confirmation that you passed the training — even if you passed, it isn't registered until the email is sent.",
     certHeadline: "Certificate",
     certTitle: "Certificate of Completion",
     certLeadIn: "This is to certify that",
@@ -3230,7 +3241,7 @@ const I18N = {
     certCompany: "Company",
     printBtn: "Print / Save as PDF",
     backBtn: "Back",
-    resultsNote: "Tap \"Share result\" below and choose your email app to report the result — don't forget to add the recipient address. You can also print or save the certificate as a PDF.",
+    resultsNote: "You can also print or save the certificate as a PDF.",
     recapTitle: "Key takeaways",
     signaturePlaceholder: "Signature / Course administrator",
     passedRibbon: "PASSED",
@@ -4853,13 +4864,12 @@ function goToSummary(){
   render();
   scrollTop();
   if(shouldAutoEmail){
-    // mailto: navigation is blocked outright by the published-Artifact viewer
-    // sandbox (confirmed via real-device testing — see esd-power-automate-reference
-    // memory). Try the native share sheet first (not a navigation, so not subject to
-    // that block); either way, also silently copy the subject to the clipboard as a
-    // free backup — the report card below (already in the DOM after render()) lets
-    // the learner finish sending manually regardless of which path worked.
-    shareReport();
+    // Auto-open the report email (mailto:, see openReportEmail()) the moment the
+    // learner reaches this screen, so they don't have to remember to press the
+    // button themselves. Also silently copy the subject to the clipboard as a
+    // free backup — the fallback fields below (already in the DOM after render())
+    // let the learner finish sending manually if the mail app didn't open.
+    openReportEmail();
     copyReportField("subject");
   }
 }
@@ -4886,7 +4896,6 @@ function renderFinal(){
     ` : "");
 
   const parts = buildReportParts();
-  const shareSupported = typeof navigator.share === "function";
 
   app.innerHTML = `
     <div class="final-hero">
@@ -4902,12 +4911,20 @@ function renderFinal(){
         </thead>
         <tbody>${rows}</tbody>
       </table></div>
-      <p class="subtitle">${t("resultsNote")}</p>
-      <div class="btn-row">
-        <button class="btn accent" onclick="goToCertificate()">${icon("certificate")}${t("viewCertificate")}</button>
-        ${shareSupported ? `<button type="button" class="btn outline" onclick="shareReport()">${icon("mail")}${t("shareBtn")}</button>` : ""}
+      <div class="report-required">
+        <span class="report-required-icon">${icon("mail")}</span>
+        <div>
+          <strong>${t("shareRequiredTitle")}</strong>
+          <p>${t("shareRequiredTextShare")}</p>
+        </div>
       </div>
-      ${shareSupported ? `` : `
+      <div class="btn-row align-top">
+        <button type="button" class="btn accent" onclick="openReportEmail()">${icon("mail")}${t("shareBtn")}</button>
+        <div class="btn-with-caption">
+          <button class="btn outline" onclick="goToCertificate()">${icon("certificate")}${t("viewCertificate")}</button>
+          <p class="btn-caption">${t("resultsNote")}</p>
+        </div>
+      </div>
       <details class="report-fallback-details">
         <summary>${t("shareFallbackNote")}</summary>
         <div class="report-field">
@@ -4932,7 +4949,6 @@ function renderFinal(){
           </div>
         </div>
       </details>
-      `}
     </div>
   `;
 }
@@ -5135,26 +5151,28 @@ async function copyReportField(which){
   return ok;
 }
 
-// Web Share API instead of mailto: — a native OS share-sheet invocation, not a page
-// navigation, so it is not subject to the Artifact viewer's mailto: navigation block
-// (see esd-power-automate-reference memory). Chrome/Android's implementation maps
-// {title,text} to the same Intent.EXTRA_SUBJECT/EXTRA_TEXT that ordinary "Share to
-// email" uses elsewhere in Android, so most mail apps correctly place `title` in the
-// Subject field — but this is app-dependent and unverified for every mail client, so
-// the copy-fields card stays as a fallback underneath rather than being replaced.
-async function shareReport(){
-  if(!(navigator.share)) return false;
+function buildMailtoUrl(){
   const parts = buildReportParts();
-  // Web Share has no recipient field, so the address travels as the first line of
-  // the shared text instead of its own UI — the learner still has to place it in
-  // the mail app's To field themselves, but at least it's right there to copy.
-  const text = t("reportToLabel") + ": " + parts.to + "\n\n" + parts.body;
-  try{
-    await navigator.share({ title: parts.subject, text });
-    return true;
-  }catch(e){
-    return false; // AbortError (user cancelled) or unsupported — no error UI needed
-  }
+  return "mailto:" + parts.to + "?subject=" + encodeURIComponent(parts.subject) + "&body=" + encodeURIComponent(parts.body);
+}
+
+// mailto: is the primary reporting mechanism (not the Web Share API — dropped after
+// on-device testing on GitHub Pages showed navigator.share's {title,text} mapping to
+// the target app's Subject/body fields is app-dependent and unreliable: a real test via
+// Outlook desktop left the Subject field completely empty, which would silently break
+// the Power Automate flow's ESDDATA parsing since that line only lives in the subject
+// — see esd-power-automate-reference memory. mailto:'s subject= param is a plain URI
+// parameter every mail client honors the same way, so it's the reliable choice now that
+// hosting is off the Claude Artifact sandbox (which used to block mailto: navigation
+// outright — that block is what motivated trying Web Share in the first place).
+function openReportEmail(){
+  const a = document.createElement("a");
+  a.href = buildMailtoUrl();
+  a.target = "_blank";
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 /* =========================================================
